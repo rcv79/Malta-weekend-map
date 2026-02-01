@@ -5,52 +5,551 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Malta Long Weekend Map (18–21 June)</title>
 
-  <link rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-          crossorigin=""></script>
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin=""
+  ></script>
 
   <style>
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0b0c10;color:#e8e8ea}
-    header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
-    #map{height:100vh}
+    :root{
+      --bg:#0b0c10;
+      --panel:#111218;
+      --panel2:#151724;
+      --text:#e8e8ea;
+      --muted:#a8acb3;
+      --border:rgba(255,255,255,.10);
+      --shadow:0 14px 40px rgba(0,0,0,.35);
+      --radius:14px;
+      --pad:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    body{ margin:0; font-family:var(--sans); background:var(--bg); color:var(--text); }
+    header{
+      padding:14px 18px;
+      border-bottom:1px solid var(--border);
+      display:flex; gap:12px; align-items:baseline; flex-wrap:wrap;
+      background:linear-gradient(180deg, rgba(255,255,255,.06), transparent);
+    }
+    header h1{ margin:0; font-size:16px; letter-spacing:.2px; }
+    header .sub{ color:var(--muted); font-size:13px; }
+
+    .layout{ display:grid; grid-template-columns: 420px 1fr; height: calc(100vh - 56px); }
+    @media (max-width: 980px){
+      .layout{ grid-template-columns: 1fr; }
+      #map{ height: 56vh; }
+    }
+
+    .sidebar{
+      background:var(--panel);
+      border-right:1px solid var(--border);
+      padding: var(--pad);
+      overflow:auto;
+    }
+
+    .card{
+      background:var(--panel2);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:12px;
+      margin-bottom:12px;
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    label{ font-size:12px; color:var(--muted); }
+
+    input[type="text"]{
+      width:100%;
+      padding:10px 11px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.25);
+      color:var(--text);
+      outline:none;
+    }
+    input[type="text"]:focus{
+      border-color:rgba(125, 211, 252, .55);
+      box-shadow:0 0 0 4px rgba(125, 211, 252, .10);
+    }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px; border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.22);
+      font-size:12px; user-select:none; cursor:pointer;
+    }
+
+    .pill input{ accent-color:#7dd3fc; }
+
+    .list{ margin-top:10px; display:flex; flex-direction:column; gap:10px; }
+    .item{
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.22);
+      border-radius:12px;
+      padding:10px;
+    }
+    .item:hover{ border-color: rgba(255,255,255,.18); }
+
+    .item .name{ display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
+    .item h3{ margin:0; font-size:14px; line-height:1.15; }
+
+    .badge{
+      font-family:var(--mono);
+      font-size:11px;
+      padding:4px 7px;
+      border-radius:8px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      white-space:nowrap;
+    }
+
+    .item p{ margin:8px 0 10px; color:var(--muted); font-size:12.5px; line-height:1.35; }
+
+    .btn{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px; border-radius:10px;
+      border:1px solid var(--border);
+      color:var(--text); text-decoration:none;
+      font-size:12px; background:rgba(0,0,0,.28);
+      cursor:pointer;
+    }
+    .btn:hover{ border-color:rgba(125, 211, 252, .55); }
+
+    #map{ width:100%; height:100%; }
+
+    /* Leaflet legend styling */
+    .map-legend{
+      background: rgba(17,18,24,.92);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 10px;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      line-height: 1.2;
+      min-width: 160px;
+    }
+    .legend-row{ display:flex; align-items:center; gap:8px; margin:6px 0; }
+    .legend-dot{
+      width:10px; height:10px; border-radius:999px; display:inline-block;
+      border: 1px solid rgba(255,255,255,.18);
+    }
+
+    .details-title{
+      display:flex; justify-content:space-between; gap:10px; align-items:baseline;
+    }
+    .details-title h2{ margin:0; font-size:15px; }
+    .details-empty{ color:var(--muted); font-size:12.5px; line-height:1.35; }
+    .details-note{ color:var(--muted); font-size:12.5px; line-height:1.35; margin:8px 0 10px; }
+    .details-actions{ display:flex; gap:8px; flex-wrap:wrap; }
   </style>
 </head>
+
 <body>
 <header>
-  <strong>Malta long weekend map</strong><br>
-  <small>Base: InterContinental Malta – distances shown from hotel</small>
+  <h1>Malta long weekend map</h1>
+  <div class="sub">18–21 June • filter categories • click a place to see distance + details</div>
 </header>
-<div id="map"></div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <!-- Details panel (Requirement #2) -->
+    <div class="card" id="details">
+      <div class="details-title">
+        <h2>Selection</h2>
+        <span class="badge" id="detailsDistance">—</span>
+      </div>
+      <div class="details-empty" id="detailsBody">
+        Click a marker or a list item to show the description and distance here.
+      </div>
+      <div class="details-actions" id="detailsActions" style="display:none; margin-top:10px;"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:13px;color:var(--muted);">Base</div>
+          <div style="font-weight:700;">InterContinental Malta (St. Julian’s)</div>
+        </div>
+        <div class="badge" id="baseCoords"></div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <label for="q">Search</label>
+      <input id="q" type="text" placeholder="Try: ftira, sunset, Valletta, beach..." />
+
+      <div style="height:10px"></div>
+      <div class="row" id="filters"></div>
+    </div>
+
+    <!-- List -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;color:var(--muted);">Places</div>
+        <div class="badge" id="count">0</div>
+      </div>
+      <div class="list" id="list"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="map"></div>
+  </main>
+</div>
 
 <script>
-const BASE = { lat:35.9237893, lng:14.4882933 };
+  // ------------------------------------------------------------
+  // Base (Hotel) reference point
+  // ------------------------------------------------------------
+  const BASE = {
+    name: "InterContinental Malta (St. Julian’s)",
+    lat: 35.9237893,
+    lng: 14.4882933
+  };
 
-const PLACES = [
-  {name:"Golden Bay",lat:35.93387,lng:14.34446},
-  {name:"Għajn Tuffieħa Bay",lat:35.92920,lng:14.34280},
-  {name:"St George’s Bay",lat:35.92599,lng:14.48783},
-  {name:"Mdina",lat:35.88583,lng:14.40306},
-  {name:"Spinola Palace",lat:35.92070,lng:14.49094},
-  {name:"Upper Barrakka Gardens",lat:35.89519,lng:14.51243},
-  {name:"Spinola Bay Promenade",lat:35.91925,lng:14.49024},
-  {name:"Rubino",lat:35.89922,lng:14.51206},
-  {name:"Gululu",lat:35.919643,lng:14.490978},
-  {name:"Zeri’s",lat:35.92102,lng:14.49211},
-  {name:"Cafe Cuba",lat:35.919754,lng:14.490413}
-];
+  // ------------------------------------------------------------
+  // Categories: color + icon symbol (emoji) used in SVG markers
+  // ------------------------------------------------------------
+  const CATEGORIES = [
+    { id:"beach",     label:"Beaches",    color:"#60a5fa", icon:"🏖️" },
+    { id:"history",   label:"Historical", color:"#34d399", icon:"🏛️" },
+    { id:"mustsee",   label:"Must-see",   color:"#fbbf24", icon:"✨" },
+    { id:"dinner",    label:"Dinner",     color:"#fb7185", icon:"🍽️" },
+    { id:"lunch",     label:"Lunch",      color:"#a78bfa", icon:"🥪" },
+    { id:"breakfast", label:"Breakfast",  color:"#f472b6", icon:"☕" },
+  ];
 
-const map = L.map("map").setView([BASE.lat, BASE.lng], 13);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+  // ------------------------------------------------------------
+  // Places
+  // ------------------------------------------------------------
+  const PLACES = [
+    // Beaches
+    { name:"Golden Bay", category:"beach", lat:35.93387, lng:14.34446,
+      note:"Classic sandy bay with sunsets; facilities and easy access." },
+    { name:"Għajn Tuffieħa Bay", category:"beach", lat:35.92920, lng:14.34280,
+      note:"More scenic/quiet feel than Golden Bay; steps down to the water." },
+    { name:"St. Peter's Pool", category:"beach", lat:35.83290, lng:14.56250,
+      note:"Rocky swimming cove with clear water; bring water shoes." },
+    { name:"St George’s Bay (walkable)", category:"beach", lat:35.92599, lng:14.48783,
+      note:"Nearest sandy bay—perfect for a quick dip without logistics." },
 
-L.marker([BASE.lat, BASE.lng]).addTo(map).bindPopup("InterContinental Malta");
+    // Historical
+    { name:"St. John's Co-Cathedral (Valletta)", category:"history", lat:35.89780, lng:14.51250,
+      note:"Baroque masterpiece; famed interior and Caravaggio works." },
+    { name:"Mdina (the Silent City)", category:"history", lat:35.88583, lng:14.40306,
+      note:"Walled medieval city; best for late afternoon + evening stroll." },
+    { name:"Ħaġar Qim Temples", category:"history", lat:35.82747, lng:14.44185,
+      note:"Prehistoric megalithic temples (UNESCO complex nearby)." },
+    { name:"Spinola Palace (walkable)", category:"history", lat:35.92070, lng:14.49094,
+      note:"Baroque palace overlooking Spinola Bay; a local landmark." },
 
-PLACES.forEach(p=>{
-  L.circleMarker([p.lat,p.lng],{radius:6})
-    .addTo(map)
-    .bindPopup(p.name);
-});
+    // Must-see
+    { name:"Upper Barrakka Gardens", category:"mustsee", lat:35.89519, lng:14.51243,
+      note:"Grand Harbour panorama—excellent at golden hour." },
+    { name:"Blue Lagoon (Comino)", category:"mustsee", lat:36.01412, lng:14.32421,
+      note:"Iconic turquoise swim day—go early to beat crowds." },
+    { name:"Dingli Cliffs Viewpoint", category:"mustsee", lat:35.84142, lng:14.39846,
+      note:"High cliffs and big horizons—great for sunset." },
+    { name:"Spinola Bay Promenade (walkable)", category:"mustsee", lat:35.91925, lng:14.49024,
+      note:"Seaside stroll with traditional boats, sunset views, and bar terraces." },
+
+    // Dinner
+    { name:"Rubino (Valletta)", category:"dinner", lat:35.89922, lng:14.51206,
+      note:"Historic favourite for refined Maltese/Mediterranean. Book ahead." },
+    { name:"Legligin (Valletta)", category:"dinner", lat:35.89923, lng:14.51185,
+      note:"Tasting menu with local/seasonal lean; good wine pairing culture." },
+    { name:"Ta' Kris (Gżira)", category:"dinner", lat:35.90905, lng:14.50643,
+      note:"Traditional Maltese classics; easy group dinner choice." },
+    { name:"Gululu (walkable)", category:"dinner", lat:35.919643, lng:14.490978,
+      note:"Go-to for Maltese classics (rabbit, bragioli, local mains) near Spinola." },
+
+    // Lunch
+    { name:"Nenu the Artisan Baker (Valletta)", category:"lunch", lat:35.89905, lng:14.51638,
+      note:"Known for Maltese ftira—excellent casual lunch." },
+    { name:"Tartarun (Marsaxlokk)", category:"lunch", lat:35.84145, lng:14.54540,
+      note:"Harbour seafood lunch in a traditional fishing village." },
+    { name:"Crystal Palace (Is-Serkin), Rabat", category:"lunch", lat:35.88455, lng:14.40053,
+      note:"Pastizzi institution—fast, cheap, extremely local." },
+    { name:"Zeri’s (walkable)", category:"lunch", lat:35.92102, lng:14.49211,
+      note:"Long-standing local favourite for a casual lunch and seafood staples." },
+
+    // Breakfast
+    { name:"Caffe Cordina (Valletta)", category:"breakfast", lat:35.89872, lng:14.51321,
+      note:"Iconic historic café for pastries, coffee, and a classic setting." },
+    { name:"LOT61 Coffee Roasters (Valletta)", category:"breakfast", lat:35.89785, lng:14.51416,
+      note:"Specialty espresso + good beans if you’re coffee people." },
+    { name:"Manouche (Valletta, St John’s Square)", category:"breakfast", lat:35.89746, lng:14.51230,
+      note:"Bakery-café for pastries and a quick breakfast." },
+    { name:"Cafe Cuba (walkable)", category:"breakfast", lat:35.919754, lng:14.490413,
+      note:"Classic Maltese café by Spinola Bay—easy morning coffee + pastries." },
+  ];
+
+  // ------------------------------------------------------------
+  // Distance (straight-line)
+  // ------------------------------------------------------------
+  const toRad = (deg) => deg * Math.PI / 180;
+  function haversineKm(lat1,lng1,lat2,lng2){
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat/2)**2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+  function kmToBase(p){
+    return haversineKm(BASE.lat, BASE.lng, p.lat, p.lng);
+  }
+
+  // ------------------------------------------------------------
+  // Marker icons: colored SVG with emoji icon in the center
+  // ------------------------------------------------------------
+  function svgIcon(color, emoji){
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 64 64">
+        <path d="M32 2C20.4 2 11 11.4 11 23c0 16.7 21 39 21 39s21-22.3 21-39C53 11.4 43.6 2 32 2z"
+              fill="${color}" stroke="rgba(255,255,255,.35)" stroke-width="2"/>
+        <circle cx="32" cy="24" r="15" fill="rgba(0,0,0,.15)"/>
+        <text x="32" y="30" text-anchor="middle" font-size="18">${emoji}</text>
+      </svg>`;
+    const url = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg.trim());
+    return L.icon({
+      iconUrl: url,
+      iconSize: [34, 34],
+      iconAnchor: [17, 33],
+      popupAnchor: [0, -28]
+    });
+  }
+
+  const iconByCat = Object.fromEntries(
+    CATEGORIES.map(c => [c.id, svgIcon(c.color, c.icon)])
+  );
+
+  // ------------------------------------------------------------
+  // Map init
+  // ------------------------------------------------------------
+  const map = L.map("map", { scrollWheelZoom:true }).setView([BASE.lat, BASE.lng], 13);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Base marker
+  const baseMarker = L.marker([BASE.lat, BASE.lng]).addTo(map);
+  baseMarker.bindPopup(`<b>${BASE.name}</b><br/>${BASE.lat.toFixed(6)}, ${BASE.lng.toFixed(6)}`);
+
+  // Layer groups per category (for filtering)
+  const layers = Object.fromEntries(CATEGORIES.map(c => [c.id, L.layerGroup().addTo(map)]));
+
+  // Marker index for selection
+  const markerByKey = new Map();
+  function placeKey(p){ return `${p.name}__${p.category}`; }
+
+  function popupHtml(p){
+    const dist = kmToBase(p).toFixed(1);
+    return `
+      <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; min-width:240px;">
+        <div style="font-weight:800; margin-bottom:6px;">${p.name}</div>
+        <div style="color:#666; font-size:12px; margin-bottom:6px;">${p.note || ""}</div>
+        <div style="font-size:12px; color:#666; margin-bottom:10px;">
+          Distance from hotel: <b>${dist} km</b> (straight-line)
+        </div>
+      </div>
+    `;
+  }
+
+  function gmapsLinks(p){
+    const open = `https://www.google.com/maps?q=${encodeURIComponent(p.lat + "," + p.lng)}&z=16`;
+    const directions = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(BASE.lat + "," + BASE.lng)}&destination=${encodeURIComponent(p.lat + "," + p.lng)}`;
+    return { open, directions };
+  }
+
+  // ------------------------------------------------------------
+  // UI elements
+  // ------------------------------------------------------------
+  const baseCoordsEl = document.getElementById("baseCoords");
+  const qEl = document.getElementById("q");
+  const filtersEl = document.getElementById("filters");
+  const listEl = document.getElementById("list");
+  const countEl = document.getElementById("count");
+
+  const detailsDistanceEl = document.getElementById("detailsDistance");
+  const detailsBodyEl = document.getElementById("detailsBody");
+  const detailsActionsEl = document.getElementById("detailsActions");
+
+  baseCoordsEl.textContent = `${BASE.lat.toFixed(5)}, ${BASE.lng.toFixed(5)}`;
+
+  const state = {
+    q: "",
+    enabledCats: new Set(CATEGORIES.map(c => c.id))
+  };
+
+  function selectPlace(p){
+    // Update details panel (Requirement #2)
+    const dist = kmToBase(p).toFixed(1);
+    detailsDistanceEl.textContent = `${dist} km`;
+    detailsBodyEl.innerHTML = `<div class="details-note">${p.note || ""}</div>`;
+
+    const links = gmapsLinks(p);
+    detailsActionsEl.style.display = "flex";
+    detailsActionsEl.innerHTML = `
+      <a class="btn" href="${links.open}" target="_blank" rel="noopener">Open map</a>
+      <a class="btn" href="${links.directions}" target="_blank" rel="noopener">Directions</a>
+    `;
+
+    // Zoom + open popup
+    const key = placeKey(p);
+    const m = markerByKey.get(key);
+    if (m){
+      map.setView(m.getLatLng(), Math.max(map.getZoom(), 15), { animate:true });
+      m.openPopup();
+    }
+  }
+
+  function renderFilters(){
+    filtersEl.innerHTML = "";
+    CATEGORIES.forEach(cat => {
+      const pill = document.createElement("label");
+      pill.className = "pill";
+      pill.title = `Toggle ${cat.label}`;
+      pill.innerHTML = `
+        <input type="checkbox" ${state.enabledCats.has(cat.id) ? "checked":""} data-cat="${cat.id}" />
+        <span>${cat.icon} ${cat.label}</span>
+      `;
+      filtersEl.appendChild(pill);
+    });
+
+    filtersEl.addEventListener("change", (e) => {
+      const cb = e.target;
+      if (!cb?.dataset?.cat) return;
+      const id = cb.dataset.cat;
+      cb.checked ? state.enabledCats.add(id) : state.enabledCats.delete(id);
+      refresh();
+    }, { once:true });
+  }
+
+  function matches(p){
+    if (!state.enabledCats.has(p.category)) return false;
+    const needle = state.q.trim().toLowerCase();
+    if (!needle) return true;
+    const hay = `${p.name} ${p.note || ""}`.toLowerCase();
+    return hay.includes(needle);
+  }
+
+  function rebuildMap(visible){
+    // clear layers + markers
+    for (const c of CATEGORIES) layers[c.id].clearLayers();
+    markerByKey.clear();
+
+    visible.forEach(p => {
+      const m = L.marker([p.lat, p.lng], { icon: iconByCat[p.category] });
+      m.bindPopup(popupHtml(p));
+      m.on("click", () => selectPlace(p)); // ensures panel updates on marker click
+      layers[p.category].addLayer(m);
+      markerByKey.set(placeKey(p), m);
+    });
+
+    const pts = [[BASE.lat, BASE.lng], ...visible.map(p => [p.lat, p.lng])];
+    if (pts.length > 1){
+      map.fitBounds(L.latLngBounds(pts).pad(0.15));
+    } else {
+      map.setView([BASE.lat, BASE.lng], 13);
+    }
+  }
+
+  function renderList(visible){
+    listEl.innerHTML = "";
+    countEl.textContent = visible.length;
+
+    // Sort by distance (closest first)
+    const sorted = [...visible].sort((a,b) => kmToBase(a) - kmToBase(b));
+
+    // Group by category
+    const byCat = new Map();
+    sorted.forEach(p => {
+      if (!byCat.has(p.category)) byCat.set(p.category, []);
+      byCat.get(p.category).push(p);
+    });
+
+    CATEGORIES.forEach(cat => {
+      const items = byCat.get(cat.id) || [];
+      if (!items.length) return;
+
+      const header = document.createElement("div");
+      header.className = "badge";
+      header.style.marginTop = "6px";
+      header.textContent = `${cat.icon} ${cat.label}`;
+      listEl.appendChild(header);
+
+      items.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "item";
+        div.tabIndex = 0;
+
+        const dist = kmToBase(p).toFixed(1);
+        div.innerHTML = `
+          <div class="name">
+            <h3>${p.name}</h3>
+            <span class="badge">${dist} km</span>
+          </div>
+          <p>${p.note || ""}</p>
+          <div class="row" style="gap:8px;">
+            <span class="badge">Click to select</span>
+          </div>
+        `;
+
+        div.addEventListener("click", () => selectPlace(p));
+        div.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectPlace(p); }
+        });
+
+        listEl.appendChild(div);
+      });
+    });
+  }
+
+  function refresh(){
+    const visible = PLACES.filter(matches);
+    rebuildMap(visible);
+    renderList(visible);
+  }
+
+  qEl.addEventListener("input", () => { state.q = qEl.value; refresh(); });
+
+  // ------------------------------------------------------------
+  // Legend control on the map (Requirement #1)
+  // ------------------------------------------------------------
+  const legend = L.control({ position: "bottomright" });
+  legend.onAdd = function(){
+    const div = L.DomUtil.create("div", "map-legend");
+    div.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Legend</div>` +
+      CATEGORIES.map(c => `
+        <div class="legend-row">
+          <span class="legend-dot" style="background:${c.color}"></span>
+          <span>${c.icon} ${c.label}</span>
+        </div>
+      `).join("");
+    // prevent scroll/drag interactions from leaking through when interacting with legend
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  legend.addTo(map);
+
+  // init
+  renderFilters();
+  refresh();
 </script>
 </body>
 </html>
