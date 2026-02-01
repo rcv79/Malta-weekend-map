@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Malta Long Weekend Map (18–21 June)</title>
+
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          crossorigin=""></script>
+
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:#0b0c10;color:#e8e8ea}
+    header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+    #map{height:100vh}
+  </style>
+</head>
+<body>
+<header>
+  <strong>Malta long weekend map</strong><br>
+  <small>Base: InterContinental Malta – distances shown from hotel</small>
+</header>
+<div id="map"></div>
+
+<script>
+const BASE = { lat:35.9237893, lng:14.4882933 };
+
+const PLACES = [
+  {name:"Golden Bay",lat:35.93387,lng:14.34446},
+  {name:"Għajn Tuffieħa Bay",lat:35.92920,lng:14.34280},
+  {name:"St George’s Bay",lat:35.92599,lng:14.48783},
+  {name:"Mdina",lat:35.88583,lng:14.40306},
+  {name:"Spinola Palace",lat:35.92070,lng:14.49094},
+  {name:"Upper Barrakka Gardens",lat:35.89519,lng:14.51243},
+  {name:"Spinola Bay Promenade",lat:35.91925,lng:14.49024},
+  {name:"Rubino",lat:35.89922,lng:14.51206},
+  {name:"Gululu",lat:35.919643,lng:14.490978},
+  {name:"Zeri’s",lat:35.92102,lng:14.49211},
+  {name:"Cafe Cuba",lat:35.919754,lng:14.490413}
+];
+
+const map = L.map("map").setView([BASE.lat, BASE.lng], 13);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+L.marker([BASE.lat, BASE.lng]).addTo(map).bindPopup("InterContinental Malta");
+
+PLACES.forEach(p=>{
+  L.circleMarker([p.lat,p.lng],{radius:6})
+    .addTo(map)
+    .bindPopup(p.name);
+});
+</script>
+</body>
+</html>
